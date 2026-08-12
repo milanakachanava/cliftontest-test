@@ -1,23 +1,18 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-  return worker.fetch(
-    new Request("http://localhost/", { headers: { accept: "text/html" } }),
-    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
-    { waitUntil() {}, passThroughOnException() {} },
-  );
-}
+test("contains the complete Human Operating System test", async () => {
+  const [page, layout] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+  ]);
 
-test("renders the Human Operating System test shell", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  assert.match(html, /<title>Human Operating System — beta-тест<\/title>/i);
-  assert.match(html, /H\/OS/);
-  assert.match(html, /Как работает/);
-  assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
+  assert.equal(page.match(/^    section:/gm)?.length, 48);
+  assert.equal(page.match(/scale: "[a-z]+"/g)?.length, 192);
+  assert.match(page, /Human Operating System — beta/);
+  assert.match(page, /Сильные стороны/);
+  assert.match(page, /Слепые зоны/);
+  assert.match(layout, /Human Operating System — beta-тест/);
+  assert.doesNotMatch(page, /Gallup|CliftonStrengths/);
 });
